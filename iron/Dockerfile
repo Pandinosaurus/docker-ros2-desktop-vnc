@@ -1,3 +1,4 @@
+# https://github.com/Tiryoh/docker-ros2-desktop-vnc
 # Copyright 2020-2023 Tiryoh<tiryoh@gmail.com>
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,7 +16,7 @@
 # This Dockerfile is based on https://github.com/AtsushiSaito/docker-ubuntu-sweb
 # which is released under the Apache-2.0 license.
 
-FROM ubuntu:focal-20230412
+FROM ubuntu:jammy-20240808
 
 ARG TARGETPLATFORM
 LABEL maintainer="Tiryoh<tiryoh@gmail.com>"
@@ -66,7 +67,7 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository ppa:mozillateam/ppa -y && 
     echo 'Pin: release o=LP-PPA-mozillateam' >> /etc/apt/preferences.d/mozilla-firefox && \
     echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/mozilla-firefox && \
     apt-get update -q && \
-    apt-get install -y --allow-downgrades \
+    apt-get install -y \
     firefox && \
     apt-get autoclean && \
     apt-get autoremove && \
@@ -84,7 +85,7 @@ RUN wget https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg
     rm -rf /var/lib/apt/lists/*
 
 # Install ROS
-ENV ROS_DISTRO foxy
+ENV ROS_DISTRO iron
 # desktop or ros-base
 ARG INSTALL_PACKAGE=desktop
 
@@ -102,11 +103,16 @@ RUN apt-get update -q && \
 
 RUN rosdep update
 
-RUN apt-get update -q && \
-    apt-get install -y \
-    ros-${ROS_DISTRO}-gazebo-ros-pkgs \
-    ros-${ROS_DISTRO}-ros-ign-gazebo && \
-    rm -rf /var/lib/apt/lists/*
+# Install simulation packages are
+# not ready for amd64/arm64 for now (May 24th, 2023)
+# https://repo.ros2.org/status_page/ros_iron_default.html?q=RED
+# RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+#     apt-get update -q && \
+#     apt-get install -y \
+#     ros-${ROS_DISTRO}-gazebo-ros-pkgs \
+#     ros-${ROS_DISTRO}-ros-gz && \
+#     rm -rf /var/lib/apt/lists/*; \
+#     fi
 
 # Enable apt-get completion after running `apt-get update` in the container
 RUN rm /etc/apt/apt.conf.d/docker-clean

@@ -15,7 +15,7 @@
 # This Dockerfile is based on https://github.com/AtsushiSaito/docker-ubuntu-sweb
 # which is released under the Apache-2.0 license.
 
-FROM ubuntu:focal-20230412
+FROM ubuntu:jammy-20240808
 
 ARG TARGETPLATFORM
 LABEL maintainer="Tiryoh<tiryoh@gmail.com>"
@@ -43,7 +43,8 @@ RUN apt-get update && \
         tigervnc-standalone-server tigervnc-common \
         supervisor wget curl gosu git sudo python3-pip tini \
         build-essential vim sudo lsb-release locales \
-        bash-completion tzdata terminator && \
+        bash-completion tzdata terminator \
+        dos2unix && \
     apt-get autoclean && \
     apt-get autoremove && \
     rm -rf /var/lib/apt/lists/*
@@ -66,7 +67,7 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository ppa:mozillateam/ppa -y && 
     echo 'Pin: release o=LP-PPA-mozillateam' >> /etc/apt/preferences.d/mozilla-firefox && \
     echo 'Pin-Priority: 1001' >> /etc/apt/preferences.d/mozilla-firefox && \
     apt-get update -q && \
-    apt-get install -y --allow-downgrades \
+    apt-get install -y \
     firefox && \
     apt-get autoclean && \
     apt-get autoremove && \
@@ -84,7 +85,7 @@ RUN wget https://gitlab.com/paulcarroty/vscodium-deb-rpm-repo/raw/master/pub.gpg
     rm -rf /var/lib/apt/lists/*
 
 # Install ROS
-ENV ROS_DISTRO foxy
+ENV ROS_DISTRO humble
 # desktop or ros-base
 ARG INSTALL_PACKAGE=desktop
 
@@ -102,17 +103,24 @@ RUN apt-get update -q && \
 
 RUN rosdep update
 
-RUN apt-get update -q && \
+# Install simulation package only on amd64
+# Not ready for arm64 for now (July 28th, 2020)
+# https://github.com/Tiryoh/docker-ros2-desktop-vnc/pull/56#issuecomment-1196359860
+RUN if [ "$TARGETPLATFORM" = "linux/amd64" ]; then \
+    apt-get update -q && \
     apt-get install -y \
     ros-${ROS_DISTRO}-gazebo-ros-pkgs \
-    ros-${ROS_DISTRO}-ros-ign-gazebo && \
-    rm -rf /var/lib/apt/lists/*
+    ros-${ROS_DISTRO}-ros-ign && \
+    rm -rf /var/lib/apt/lists/*; \
+    fi
 
 # Enable apt-get completion after running `apt-get update` in the container
 RUN rm /etc/apt/apt.conf.d/docker-clean
 
 COPY ./entrypoint.sh /
+RUN dos2unix /entrypoint.sh
 ENTRYPOINT [ "/bin/bash", "-c", "/entrypoint.sh" ]
 
 ENV USER ubuntu
 ENV PASSWD ubuntu
+
